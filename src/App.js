@@ -7,7 +7,7 @@ import PptxGenJS from "pptxgenjs";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
 import "./App.css";
 
-// ── text extraction ──────────────────────────────────────────────────────────
+// ── file extraction ──────────────────────────────────────────────────────────
 const extractText = async (file) => {
   if (file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
     const buf = await file.arrayBuffer();
@@ -15,7 +15,6 @@ const extractText = async (file) => {
     return value.trim();
   }
   if (file.type.startsWith("text/")) return await file.text();
-  if (file.type === "application/pdf") return "[PDF uploaded]";
   return `[File: ${file.name}]`;
 };
 
@@ -25,27 +24,27 @@ const QUICK_ACTIONS = [
     id: "risk",
     icon: "§",
     label: "Risk Scanner",
-    display: "Scan documents for legal risks",
-    color: "#e05c5c",
-    prompt: "Perform a comprehensive legal risk analysis of the uploaded documents. Structure your response with:\n\n**EXECUTIVE SUMMARY**\n\n**HIGH RISK**\n\n**MEDIUM RISK**\n\n**LOW RISK**\n\n**RECOMMENDED ACTIONS**\n\nBe specific. Cite clause numbers or sections where applicable.",
+    display: "Scan document for legal risks",
+    color: "#b84040",
+    prompt: "Perform a comprehensive legal risk analysis of the uploaded documents. Use this structure:\n\n## Executive Summary\n\n## High Risk\n\n## Medium Risk\n\n## Low Risk\n\n## Recommended Actions\n\nCite clause numbers or sections where applicable. Be specific and actionable.",
     mode: "risk",
   },
   {
     id: "timeline",
-    icon: "—",
-    label: "Legal Timeline",
-    display: "Generate a visual timeline of key dates",
-    color: "#5c9ee0",
-    prompt: "Extract all dates, deadlines, obligations, and key events from the uploaded documents. Generate an HTML visual timeline. Return ONLY a complete HTML block starting with <div — no explanation, no markdown fences. Use inline styles only. Dark theme: background #0e0e12, text #e8e8f0, accent #c9a84c.",
+    icon: "≡",
+    label: "Timeline",
+    display: "Extract key dates as a visual timeline",
+    color: "#2a4a7a",
+    prompt: "Extract all dates, deadlines, obligations, and key events from the documents. Return ONLY a self-contained HTML block starting with <div — no markdown fences, no explanation. Style it as a clean vertical timeline. Use inline styles. Light background #f7f6f3, text #1a1916, accent #2d5016.",
     mode: "visual",
   },
   {
     id: "slides",
-    icon: "▦",
+    icon: "▨",
     label: "Slide Deck",
     display: "Generate a slide deck from documents",
-    color: "#7c6af7",
-    prompt: "Summarize the uploaded documents as a professional slide deck for a client presentation. Return ONLY valid JSON, nothing else, no markdown fences: {\"slides\":[{\"title\":\"string\",\"bullets\":[\"string\",\"string\"]}]}",
+    color: "#2d5016",
+    prompt: "Summarize the uploaded documents as a professional legal presentation. Return ONLY valid JSON, no markdown fences, no explanation: {\"title\":\"string\",\"subtitle\":\"string\",\"slides\":[{\"type\":\"content\",\"title\":\"string\",\"bullets\":[\"string\"]}]}. Max 8 slides. First slide type should be 'cover'. Last slide type 'closing'. Other slides type 'content'.",
     mode: "slides",
   },
 ];
@@ -53,9 +52,9 @@ const QUICK_ACTIONS = [
 // ── helpers ──────────────────────────────────────────────────────────────────
 const detectMode = (text) => {
   const t = text.toLowerCase();
-  if (t.includes("slide") || t.includes("presentation") || t.includes("pptx")) return "slides";
+  if (t.includes("slide") || t.includes("presentation") || t.includes("deck")) return "slides";
   if (t.includes("timeline") || t.includes("visual") || t.includes("diagram")) return "visual";
-  if (t.includes("risk") || t.includes("scan")) return "risk";
+  if (t.includes("risk scan") || t.includes("scan for risk")) return "risk";
   return "legal";
 };
 
@@ -78,56 +77,132 @@ const extractJson = (text) => {
 };
 
 // ── pptx export ──────────────────────────────────────────────────────────────
-const exportPptx = (slides) => {
+const exportPptx = (deck) => {
   const pptx = new PptxGenJS();
-  slides.forEach((slide, i) => {
+  pptx.layout = "LAYOUT_WIDE";
+
+  const DARK   = "1c2b1c";
+  const LIGHT  = "f7f6f3";
+  const GREEN  = "4a7c2f";
+  const GREEN2 = "2d5016";
+  const WHITE  = "e8f0e0";
+  const GREY   = "8a9e7a";
+
+  const slides = deck.slides || [];
+
+  slides.forEach((slide) => {
     const s = pptx.addSlide();
-    s.background = { color: "0E0E12" };
-    s.addText(slide.title, { x: 0.5, y: 0.3, w: 9, h: 0.9, fontSize: 26, bold: true, color: "C9A84C", fontFace: "Georgia" });
-    (slide.bullets || []).forEach((b, j) => {
-      s.addText(`${b}`, { x: 0.7, y: 1.6 + j * 0.65, w: 8.5, h: 0.6, fontSize: 15, color: "E8E8F0", fontFace: "Calibri", bullet: true });
-    });
-    s.addText(`${i + 1}`, { x: 9, y: 5.3, w: 0.5, h: 0.3, fontSize: 10, color: "5A5A72", align: "right" });
+    s.background = { color: DARK };
+
+    // top accent bar
+    s.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: "100%", h: 0.06, fill: { color: GREEN } });
+
+    if (slide.type === "cover") {
+      // cover layout
+      s.addText(deck.title || slide.title, {
+        x: 0.8, y: 1.6, w: 10, h: 1.2,
+        fontSize: 36, bold: true, color: WHITE,
+        fontFace: "Georgia", align: "left",
+      });
+      s.addText(deck.subtitle || "", {
+        x: 0.8, y: 2.9, w: 10, h: 0.6,
+        fontSize: 16, color: GREY, fontFace: "Calibri", align: "left",
+      });
+      s.addShape(pptx.ShapeType.line, { x: 0.8, y: 3.6, w: 4, h: 0, line: { color: GREEN, width: 1 } });
+      s.addText("Pearson AI", {
+        x: 0.8, y: 4.8, w: 5, h: 0.3,
+        fontSize: 9, color: GREY, fontFace: "Calibri", italic: true,
+      });
+    } else if (slide.type === "closing") {
+      s.addText(slide.title || "Thank You", {
+        x: 0, y: 1.8, w: "100%", h: 1.2,
+        fontSize: 32, bold: true, color: WHITE,
+        fontFace: "Georgia", align: "center",
+      });
+      s.addShape(pptx.ShapeType.line, { x: 4, y: 3.1, w: 5, h: 0, line: { color: GREEN, width: 1 } });
+      s.addText("Pearson AI  —  Legal Intelligence", {
+        x: 0, y: 3.5, w: "100%", h: 0.4,
+        fontSize: 10, color: GREY, fontFace: "Calibri", align: "center",
+      });
+    } else {
+      // content layout
+      s.addText(slide.title, {
+        x: 0.6, y: 0.3, w: 11.4, h: 0.75,
+        fontSize: 20, bold: true, color: WHITE,
+        fontFace: "Georgia", align: "left",
+      });
+      s.addShape(pptx.ShapeType.line, { x: 0.6, y: 1.1, w: 11.8, h: 0, line: { color: GREEN2, width: 0.75 } });
+
+      (slide.bullets || []).forEach((bullet, j) => {
+        s.addShape(pptx.ShapeType.rect, {
+          x: 0.6, y: 1.3 + j * 0.68, w: 0.04, h: 0.35,
+          fill: { color: GREEN },
+        });
+        s.addText(bullet, {
+          x: 0.85, y: 1.28 + j * 0.68, w: 11.2, h: 0.44,
+          fontSize: 13, color: WHITE, fontFace: "Calibri",
+          valign: "middle",
+        });
+      });
+
+      // slide number bottom right
+      s.addText(`${slides.indexOf(slide) + 1} / ${slides.length}`, {
+        x: 11.5, y: 5.3, w: 1.4, h: 0.25,
+        fontSize: 7, color: GREY, fontFace: "Calibri", align: "right",
+      });
+    }
   });
-  pptx.writeFile({ fileName: "LegalDeck.pptx" });
+
+  pptx.writeFile({ fileName: "PearsonAI_Deck.pptx" });
 };
 
-// ── export word ───────────────────────────────────────────────────────────────
+// ── word export ───────────────────────────────────────────────────────────────
 const exportDocx = async (content, index) => {
   const lines = content.split("\n").filter(Boolean);
   const children = lines.map((line) => {
-    if (line.startsWith("# ")) return new Paragraph({ text: line.slice(2), heading: HeadingLevel.HEADING_1 });
-    if (line.startsWith("## ")) return new Paragraph({ text: line.slice(3), heading: HeadingLevel.HEADING_2 });
-    if (line.startsWith("### ")) return new Paragraph({ text: line.slice(4), heading: HeadingLevel.HEADING_3 });
+    if (line.startsWith("# "))  return new Paragraph({ text: line.slice(2),  heading: HeadingLevel.HEADING_1 });
+    if (line.startsWith("## ")) return new Paragraph({ text: line.slice(3),  heading: HeadingLevel.HEADING_2 });
+    if (line.startsWith("### "))return new Paragraph({ text: line.slice(4),  heading: HeadingLevel.HEADING_3 });
     return new Paragraph({ children: [new TextRun({ text: line.replace(/\*\*/g, "") })] });
   });
   const doc = new Document({ sections: [{ children }] });
   const blob = await Packer.toBlob(doc);
-  saveAs(blob, `LegalAnalysis_${index + 1}.docx`);
+  saveAs(blob, `PearsonAI_${index + 1}.docx`);
 };
 
-// ── sub-components ────────────────────────────────────────────────────────────
-const SlidePreview = ({ slides, onExport }) => (
-  <div className="slides-preview">
-    <div className="slides-grid">
-      {slides.map((slide, i) => (
-        <div key={i} className="slide-card">
-          <div className="slide-num">SLIDE {i + 1}</div>
-          <div className="slide-title">{slide.title}</div>
-          <ul className="slide-bullets">
-            {(slide.bullets || []).map((b, j) => <li key={j}>{b}</li>)}
-          </ul>
-        </div>
-      ))}
+// ── slide preview card ────────────────────────────────────────────────────────
+const SlideCard = ({ slide, index, total }) => (
+  <div className="slide-card">
+    <div className="slide-num">{String(index + 1).padStart(2, "0")} / {total}</div>
+    <div className="slide-title">{slide.title}</div>
+    <ul className="slide-bullets">
+      {(slide.bullets || []).slice(0, 4).map((b, j) => <li key={j}>{b}</li>)}
+    </ul>
+    <div className="slide-footer">
+      <span className="slide-footer-brand">Pearson AI</span>
     </div>
-    <button className="export-btn pptx-btn" onClick={onExport}>Download PPTX</button>
   </div>
 );
+
+const SlidePreview = ({ deck, onExport }) => {
+  const slides = deck.slides || [];
+  return (
+    <div className="slides-preview">
+      <div className="slides-header">{slides.length} slides — {deck.title}</div>
+      <div className="slides-grid">
+        {slides.map((slide, i) => (
+          <SlideCard key={i} slide={slide} index={i} total={slides.length} />
+        ))}
+      </div>
+      <button className="action-small" onClick={onExport}>Download PPTX</button>
+    </div>
+  );
+};
 
 const VisualFrame = ({ html }) => (
   <div className="visual-frame">
     <iframe
-      srcDoc={`<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{background:#0e0e12;color:#e8e8f0;font-family:sans-serif;padding:1rem;margin:0;}</style></head><body>${html}</body></html>`}
+      srcDoc={`<!DOCTYPE html><html><head><meta charset="utf-8"><style>*{box-sizing:border-box}body{background:#f7f6f3;color:#1a1916;font-family:Inter,sans-serif;padding:1.5rem;margin:0;font-size:13px;}</style></head><body>${html}</body></html>`}
       sandbox="allow-scripts"
       title="Visual"
       className="visual-iframe"
@@ -137,13 +212,13 @@ const VisualFrame = ({ html }) => (
 
 // ── main ──────────────────────────────────────────────────────────────────────
 export default function App() {
-  const [docs, setDocs] = useState([]);
-  const [question, setQuestion] = useState("");
-  const [messages, setMessages] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [docs, setDocs]               = useState([]);
+  const [question, setQuestion]       = useState("");
+  const [messages, setMessages]       = useState([]);
+  const [loading, setLoading]         = useState(false);
   const [loadingFiles, setLoadingFiles] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const chatRef = useRef(null);
+  const chatRef    = useRef(null);
   const textareaRef = useRef(null);
 
   useEffect(() => {
@@ -153,7 +228,7 @@ export default function App() {
   useEffect(() => {
     if (!textareaRef.current) return;
     textareaRef.current.style.height = "auto";
-    textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 160) + "px";
+    textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 140) + "px";
   }, [question]);
 
   const handleFiles = async (e) => {
@@ -161,13 +236,11 @@ export default function App() {
     if (!files.length) return;
     setLoadingFiles(true);
     try {
-      const newDocs = await Promise.all(
-        files.map(async (file) => {
-          let text = "";
-          try { text = await extractText(file); } catch { text = "[Error reading file]"; }
-          return { id: crypto.randomUUID(), name: file.name, text };
-        })
-      );
+      const newDocs = await Promise.all(files.map(async (file) => {
+        let text = "";
+        try { text = await extractText(file); } catch { text = "[Error reading file]"; }
+        return { id: crypto.randomUUID(), name: file.name, text };
+      }));
       setDocs((prev) => [...prev, ...newDocs]);
     } finally {
       setLoadingFiles(false);
@@ -178,11 +251,11 @@ export default function App() {
   const removeDoc = (id) => setDocs((prev) => prev.filter((d) => d.id !== id));
 
   const sendMessage = async (promptText, mode, displayText) => {
-    const modeToUse = mode || detectMode(promptText);
-    // displayText is what shows in chat; promptText is what goes to the API
+    const modeToUse   = mode || detectMode(promptText);
     const visibleText = displayText || promptText;
-    const userMsg = { role: "user", content: promptText, display: visibleText };
-    const history = [...messages, userMsg];
+    const userMsg     = { role: "user", content: promptText, display: visibleText };
+    const history     = [...messages, userMsg];
+
     setMessages([...history, { role: "assistant", content: "...", mode: modeToUse }]);
     setQuestion("");
     setLoading(true);
@@ -201,10 +274,9 @@ export default function App() {
           mode: modeToUse,
         }),
       });
-
       const text = await res.text();
       let reply;
-      try { const data = JSON.parse(text); reply = data.reply || data.error || text; }
+      try { const d = JSON.parse(text); reply = d.reply || d.error || text; }
       catch { reply = text; }
 
       setMessages((prev) => {
@@ -221,68 +293,80 @@ export default function App() {
     }
   };
 
-  const renderMessage = (m, i) => {
-    // ── user message ──
+  // ── render each message ──────────────────────────────────────────────────
+  const renderMsg = (m, i) => {
     if (m.role === "user") {
       return (
         <div key={i} className="msg user">
-          <div className="msg-role">You</div>
-          <div className="msg-content user-content">{m.display || m.content}</div>
-        </div>
-      );
-    }
-
-    // ── assistant loading ──
-    if (m.content === "...") {
-      return (
-        <div key={i} className="msg assistant">
-          <div className="msg-role">LexAI</div>
-          <div className="msg-content ai-content"><span className="dots" /></div>
-        </div>
-      );
-    }
-
-    // ── slides ──
-    if (m.mode === "slides") {
-      const json = extractJson(m.content);
-      return (
-        <div key={i} className="msg assistant">
-          <div className="msg-role">LexAI</div>
-          <div className="msg-content ai-content">
-            {json?.slides
-              ? <SlidePreview slides={json.slides} onExport={() => exportPptx(json.slides)} />
-              : <ReactMarkdown remarkPlugins={[remarkGfm]} className="markdown">{m.content}</ReactMarkdown>
-            }
+          <div className="msg-inner">
+            <div className="msg-role">You</div>
+            <div className="user-content">{m.display || m.content}</div>
           </div>
         </div>
       );
     }
 
-    // ── visual ──
+    // loading
+    if (m.content === "...") {
+      return (
+        <div key={i} className="msg assistant">
+          <div className="msg-inner">
+            <div className="msg-role">Pearson AI</div>
+            <div className="ai-content">
+              <div className="dots"><span/><span/><span/></div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // slides
+    if (m.mode === "slides") {
+      const deck = extractJson(m.content);
+      return (
+        <div key={i} className="msg assistant">
+          <div className="msg-inner">
+            <div className="msg-role">Pearson AI</div>
+            <div className="ai-content">
+              {deck?.slides
+                ? <SlidePreview deck={deck} onExport={() => exportPptx(deck)} />
+                : <ReactMarkdown remarkPlugins={[remarkGfm]} className="markdown">{m.content}</ReactMarkdown>
+              }
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // visual
     if (m.mode === "visual") {
       const html = extractHtml(m.content);
       return (
         <div key={i} className="msg assistant">
-          <div className="msg-role">LexAI</div>
-          <div className="msg-content ai-content">
-            {html
-              ? <VisualFrame html={html} />
-              : <ReactMarkdown remarkPlugins={[remarkGfm]} className="markdown">{m.content}</ReactMarkdown>
-            }
+          <div className="msg-inner">
+            <div className="msg-role">Pearson AI</div>
+            <div className="ai-content">
+              {html
+                ? <VisualFrame html={html} />
+                : <ReactMarkdown remarkPlugins={[remarkGfm]} className="markdown">{m.content}</ReactMarkdown>
+              }
+            </div>
           </div>
         </div>
       );
     }
 
-    // ── default legal response ──
+    // default legal response
     return (
       <div key={i} className="msg assistant">
-        <div className="msg-role">LexAI</div>
-        <div className="msg-content ai-content">
-          <ReactMarkdown remarkPlugins={[remarkGfm]} className="markdown">{m.content}</ReactMarkdown>
-          <div className="msg-actions">
-            <button className="export-btn" onClick={() => exportDocx(m.content, i)}>Export Word</button>
-            <button className="export-btn copy-btn" onClick={() => navigator.clipboard.writeText(m.content)}>Copy</button>
+        <div className="msg-inner">
+          <div className="msg-role">Pearson AI</div>
+          <div className="ai-content">
+            <ReactMarkdown remarkPlugins={[remarkGfm]} className="markdown">{m.content}</ReactMarkdown>
+            <div className="msg-actions">
+              <button className="action-small" onClick={() => exportDocx(m.content, i)}>Export Word</button>
+              <button className="action-small" onClick={() => navigator.clipboard.writeText(m.content)}>Copy</button>
+            </div>
           </div>
         </div>
       </div>
@@ -291,45 +375,48 @@ export default function App() {
 
   return (
     <div className="app">
+      {/* HEADER */}
       <header className="header">
         <button className="sidebar-toggle" onClick={() => setSidebarOpen((v) => !v)}>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <rect y="2" width="16" height="1.5" rx="1"/>
-            <rect y="7.25" width="16" height="1.5" rx="1"/>
-            <rect y="12.5" width="16" height="1.5" rx="1"/>
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="currentColor">
+            <rect y="1"   width="15" height="1.5" rx="0.75"/>
+            <rect y="6.75" width="15" height="1.5" rx="0.75"/>
+            <rect y="12.5" width="15" height="1.5" rx="0.75"/>
           </svg>
         </button>
-        <div className="header-logo">LEX<span>AI</span></div>
-        <div className="header-tag">Senior Legal Intelligence</div>
+        <div className="header-logo">Pearson<span> AI</span></div>
+        <div className="header-tag">Legal Intelligence</div>
         <button className="new-chat-btn" onClick={() => setMessages([])}>New Chat</button>
       </header>
 
       <div className="body">
+        {/* SIDEBAR */}
         <aside className={`sidebar ${sidebarOpen ? "open" : "closed"}`}>
+
           <div className="section-label">Documents</div>
           <label className={`upload-btn ${loadingFiles ? "loading" : ""}`}>
             {loadingFiles ? "Processing…" : "Upload Files"}
-            <input type="file" accept=".txt,.docx,.pdf,image/*" multiple onChange={handleFiles} style={{ display: "none" }} />
+            <input type="file" accept=".txt,.docx,image/*" multiple onChange={handleFiles} style={{ display: "none" }} />
           </label>
           <div className="doc-list">
-            {docs.length === 0 && <p className="doc-empty">No files uploaded.</p>}
+            {docs.length === 0 && <p className="doc-empty">No files yet.</p>}
             {docs.map((doc) => (
               <div key={doc.id} className="doc-item">
-                <svg className="doc-icon-svg" viewBox="0 0 16 16" fill="currentColor">
-                  <path d="M4 0h6l4 4v11a1 1 0 01-1 1H3a1 1 0 01-1-1V1a1 1 0 011-1z" opacity=".15"/>
-                  <path d="M4 0h6l4 4v11a1 1 0 01-1 1H3a1 1 0 01-1-1V1a1 1 0 011-1zm0 1v13h9V5H9V1H4zm6 0v3h3l-3-3z"/>
+                <svg className="doc-icon-svg" viewBox="0 0 14 14" fill="currentColor">
+                  <path d="M3 0h6l3 3v10a1 1 0 01-1 1H3a1 1 0 01-1-1V1a1 1 0 011-1z" opacity=".12"/>
+                  <path d="M3 0h6l3 3v10a1 1 0 01-1 1H3a1 1 0 01-1-1V1a1 1 0 011-1zm0 1v12h8V4H8V1H3zm5 0v2.5h2.5L8 1z"/>
                 </svg>
                 <span className="doc-name" title={doc.name}>{doc.name}</span>
                 <button className="doc-remove" onClick={() => removeDoc(doc.id)}>
-                  <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
-                    <path d="M1 1l8 8M9 1l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                  <svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                    <path d="M1 1l7 7M8 1l-7 7"/>
                   </svg>
                 </button>
               </div>
             ))}
           </div>
 
-          <div className="section-label" style={{ marginTop: "1.5rem" }}>Quick Actions</div>
+          <div className="section-label">Quick Actions</div>
           <div className="quick-actions">
             {QUICK_ACTIONS.map((a) => (
               <button
@@ -338,7 +425,7 @@ export default function App() {
                 style={{ "--action-color": a.color }}
                 onClick={() => sendMessage(a.prompt, a.mode, a.display)}
                 disabled={loading || docs.length === 0}
-                title={docs.length === 0 ? "Upload a document first" : a.display}
+                title={docs.length === 0 ? "Upload a document first" : ""}
               >
                 <span className="action-icon">{a.icon}</span>
                 <span>{a.label}</span>
@@ -346,35 +433,31 @@ export default function App() {
             ))}
           </div>
 
-          <div className="section-label" style={{ marginTop: "1.5rem" }}>Suggested</div>
+          <div className="section-label">Suggested</div>
           <div className="suggestions">
-            {[
-              "Summarize key obligations",
-              "Who are the parties?",
-              "List termination clauses",
-              "Extract all defined terms",
-              "Flag unusual provisions",
-            ].map((s) => (
+            {["Summarize key obligations", "Who are the parties?", "List termination clauses", "Extract defined terms", "Flag unusual provisions"].map((s) => (
               <button key={s} className="suggestion-chip"
                 onClick={() => { setQuestion(s); textareaRef.current?.focus(); }}>
                 {s}
               </button>
             ))}
           </div>
+
         </aside>
 
+        {/* CHAT */}
         <main className="chat">
           <div className="chat-history" ref={chatRef}>
             {messages.length === 0 ? (
               <div className="chat-empty">
                 <div className="empty-icon-wrap">
-                  <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <circle cx="16" cy="16" r="14"/>
-                    <path d="M10 16h12M16 10v12" strokeLinecap="round"/>
+                  <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="1.2">
+                    <circle cx="14" cy="14" r="12"/>
+                    <path d="M9 14h10M14 9v10" strokeLinecap="round"/>
                   </svg>
                 </div>
-                <div className="empty-title">LexAI Legal Assistant</div>
-                <p className="empty-sub">Upload documents and ask anything, or use Quick Actions to scan for risks, generate timelines, and create slide decks.</p>
+                <div className="empty-title">Pearson AI</div>
+                <p className="empty-sub">Upload documents and ask anything. Use Quick Actions for risk scanning, timelines, and slide decks.</p>
                 <div className="empty-chips">
                   {["Review this contract", "What are my risks?", "Summarize key terms"].map((c) => (
                     <button key={c} className="empty-chip"
@@ -383,39 +466,38 @@ export default function App() {
                 </div>
               </div>
             ) : (
-              messages.map((m, i) => renderMessage(m, i))
+              messages.map((m, i) => renderMsg(m, i))
             )}
           </div>
 
           <div className="input-bar">
-            <textarea
-              ref={textareaRef}
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  if (question.trim()) sendMessage(question);
-                }
-              }}
-              placeholder="Ask LexAI anything about your documents…"
-              disabled={loading}
-              rows={1}
-            />
-            <button
-              className="send-btn"
-              onClick={() => question.trim() && sendMessage(question)}
-              disabled={loading || !question.trim()}
-            >
-              {loading
-                ? <span className="send-dots" />
-                : (
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M2 8l12-6-5 6 5 6z"/>
+            <div className="input-wrap">
+              <textarea
+                ref={textareaRef}
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    if (question.trim()) sendMessage(question);
+                  }
+                }}
+                placeholder="Ask Pearson AI about your documents…"
+                disabled={loading}
+                rows={1}
+              />
+              <button
+                className="send-btn"
+                onClick={() => question.trim() && sendMessage(question)}
+                disabled={loading || !question.trim()}
+              >
+                {loading ? <span className="send-dots" /> : (
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                    <path d="M1 7h12M8 3l5 4-5 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
                   </svg>
-                )
-              }
-            </button>
+                )}
+              </button>
+            </div>
           </div>
         </main>
       </div>
