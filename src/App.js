@@ -82,7 +82,6 @@ const exportPptx = (deck) => {
   pptx.layout = "LAYOUT_WIDE";
 
   const DARK   = "1c2b1c";
-  const LIGHT  = "f7f6f3";
   const GREEN  = "4a7c2f";
   const GREEN2 = "2d5016";
   const WHITE  = "e8f0e0";
