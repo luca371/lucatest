@@ -200,6 +200,8 @@ body {
   max-width: 680px;
   margin: 0 auto;
   padding: 0 2rem;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .msg-role {
@@ -215,7 +217,7 @@ body {
 
 .user-content { font-size: 0.9rem; line-height: 1.65; color: var(--text); white-space: pre-wrap; }
 
-.ai-content { font-size: 0.875rem; line-height: 1.75; color: var(--text); }
+.ai-content { font-size: 0.875rem; line-height: 1.75; color: var(--text); overflow-wrap: break-word; word-break: break-word; min-width: 0; }
 
 /* ── MARKDOWN ─────────────────────────────────────────── */
 .markdown h1 {
@@ -232,7 +234,7 @@ body {
   margin: 1rem 0 0.4rem; text-transform: uppercase;
   letter-spacing: 0.06em; font-family: 'JetBrains Mono', monospace;
 }
-.markdown p { margin-bottom: 0.75rem; }
+.markdown p { margin-bottom: 0.75rem; overflow-wrap: break-word; word-break: break-word; }
 .markdown p:last-child { margin-bottom: 0; }
 .markdown ul, .markdown ol { padding-left: 1.25rem; margin-bottom: 0.75rem; }
 .markdown li { margin-bottom: 0.3rem; line-height: 1.65; }
@@ -254,14 +256,15 @@ body {
   border-radius: 6px; padding: 1rem; overflow-x: auto; margin: 0.75rem 0;
 }
 .markdown pre code { background: none; border: none; padding: 0; font-size: 0.82em; }
-.markdown table { border-collapse: collapse; width: 100%; margin: 0.75rem 0; font-size: 0.82rem; }
+.markdown table { border-collapse: collapse; width: 100%; margin: 0.75rem 0; font-size: 0.82rem; display: block; overflow-x: auto; }
+.markdown table thead, .markdown table tbody, .markdown table tr { width: 100%; }
 .markdown th {
   background: var(--sidebar); color: var(--text); font-weight: 500;
   padding: 0.5rem 0.75rem; text-align: left;
   border-bottom: 2px solid var(--border2);
   font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; letter-spacing: 0.04em;
 }
-.markdown td { padding: 0.45rem 0.75rem; border-bottom: 1px solid var(--border); }
+.markdown td { padding: 0.45rem 0.75rem; border-bottom: 1px solid var(--border); word-break: break-word; }
 .markdown hr { border: none; border-top: 1px solid var(--border); margin: 1rem 0; }
 
 /* ── MSG ACTIONS ──────────────────────────────────────── */
