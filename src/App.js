@@ -404,7 +404,12 @@ export default function App() {
 
   const handleFiles = async (e) => {
     const files = Array.from(e.target.files);
-    if(!files.length) return;
+    if (!files.length) return;
+    if (docs.length + files.length > 5) {
+      alert(`Maximum 5 documents allowed. You have ${docs.length} uploaded.`);
+      e.target.value = "";
+      return;
+    }
     setLoadingFiles(true);
     try {
       const newDocs = await Promise.all(files.map(async(file)=>{
