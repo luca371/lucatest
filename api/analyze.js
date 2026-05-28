@@ -35,7 +35,20 @@ Analizează datele din tragerile loto furnizate și oferă statistici detaliate,
 - Ce numere lipsesc complet din ultimele 10 trageri
 - Trendul ascendent/descendent al frecvenței pentru top numere
 
-### 6. Sugestii Statistice
+### 6. Teoria Numerelor Aplicată la Loto
+Aplică concepte din teoria numerelor pentru a identifica tipare ascunse:
+
+- **Numere prime**: câte numere prime (2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47) apar în medie per tragere și care sunt cele mai frecvente; propune combinații cu 2-3 numere prime
+- **Numere Fibonacci**: identifică numerele din șirul Fibonacci prezente în grilă (1, 2, 3, 5, 8, 13, 21, 34) — analizează dacă apar mai frecvent decât statistic așteptat
+- **Pătrate perfecte**: 1, 4, 9, 16, 25, 36, 49 — frecvența lor istorică vs. așteptată
+- **Numere triunghiulare**: 1, 3, 6, 10, 15, 21, 28, 36, 45 — frecvență și tipar
+- **Multipli și divizori**: analizează dacă multiplii lui 7 (7, 14, 21, 28, 35, 42, 49) sau ai lui 3 apar în clustere
+- **Congruențe modulo**: grupează numerele mod 6, mod 7 — identifică dacă anumite clase de resturi sunt supra/sub-reprezentate în tragerile câștigătoare
+- **Suma cifrelor**: calculează suma cifrelor fiecărui număr (ex: 49 → 4+9=13 → 1+3=4) și identifică dacă anumite rădăcini digitale apar mai des
+- **Simetrie față de 25**: numere simetrice (ex: 10 și 40, 15 și 35) — apar mai des împreună?
+- **Secvențe aritmetice**: cât de des apar 3+ numere în progresie aritmetică (ex: 5, 15, 25 sau 7, 14, 21) în aceeași tragere
+
+### 7. Sugestii Statistice
 Pe baza analizei de mai sus, propune:
 - **Combinație "hot"**: 6 numere cu frecvență ridicată și interval curent mic
 - **Combinație "due"**: 6 numere scadente cu interval curent mare
@@ -50,8 +63,9 @@ Pe baza analizei de mai sus, propune:
 4. **⏰ Numere Scadente** — lista numerelor "overdue"
 5. **🤝 Perechi Frecvente** — top combinații de 2-3 numere
 6. **⚖️ Distribuție & Sume** — par/impar, zone, suma medie
-7. **🎯 Sugestii Combinații** — 3 combinații sugerate cu justificare statistică
-8. **⚠️ Disclaimer** — reamintire că loteria este joc de șansă pur
+7. **🔢 Teoria Numerelor** — prime, Fibonacci, pătrate perfecte, congruențe, rădăcini digitale
+8. **🎯 Sugestii Combinații** — 3 combinații sugerate cu justificare statistică + teoria numerelor
+9. **⚠️ Disclaimer** — reamintire că loteria este joc de șansă pur
 
 ## Reguli
 - Răspunde ÎNTOTDEAUNA în română
